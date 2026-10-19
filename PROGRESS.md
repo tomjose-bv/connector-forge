@@ -30,8 +30,13 @@
   `connectors/reference/`, self-contained, stdlib only + `tests/test_reference.py` asserting
   perfect scores. 59 tests passing.
 
+- M1.8b Reference connectors for all 16 dev scenarios, all scoring 1.0 on every metric with
+  0 rate violations (rate-limited scenarios do hit a 429 each). 72 tests passing (~17 s).
+
 ## Next step
 
-Milestone 1, step 8b: reference connectors for the remaining 12 dev scenarios (same
-structure as the existing 4: RESOURCES dict, `_request` with 429 retry, `_auth_headers`,
-`_pages`, `sync`). Then add a test that every dev scenario has a reference connector.
+Milestone 1, step 9: held-out scenarios, in their own commit before any agent exists.
+5 YAML files in `scenarios/heldout/` with combinations not in the dev set (e.g. cursor +
+api_key + rate limit + nested; link + oauth + soft deletes; multi-resource page + bearer;
+string pk incremental; offset + oauth + drift rename). No reference connectors are written
+for them yet (step 10 adds them, kept out of any agent prompt).

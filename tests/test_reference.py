@@ -18,3 +18,8 @@ def test_reference_connector_is_perfect(path):
     assert (r.missed_updates, r.missed_deletes, r.refetched) == (0, 0, 0)
     assert r.schema_accuracy == 1.0
     assert r.rate_violations == 0
+
+
+def test_every_dev_scenario_has_a_reference_connector():
+    scenarios = {p.stem for p in (ROOT / "scenarios" / "dev").glob("*.yaml")}
+    assert scenarios == {p.stem for p in CONNECTORS}
