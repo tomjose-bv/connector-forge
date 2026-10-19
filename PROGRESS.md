@@ -39,9 +39,22 @@
 - M1.10 Reference connectors for the 5 held-out scenarios in
   `connectors/reference/heldout/` (never to be shown to agents); all perfect. 83 tests.
 
+- M1.11 CLI `connector-forge eval --set dev|heldout --variant reference [--scenario X]
+  [--out file.json]` (table + JSON with machine/date). Employer-terms checks clean (tree and
+  history). 84 tests passing (~12 s).
+- **Milestone 1 done.**
+
+## Ideas for later (not planned yet)
+
+- v5–v6 idea from the user: an agent platform where a customer describes a business problem
+  in natural language ("revenue dipped last quarter, why?"); the agent asks which apps they
+  use, builds connectors, loads the data and diagnoses the cause. Possible measurable
+  version: synthetic multi-app business with a planted root cause; score whether the agent
+  finds it. Not added to PLAN.md yet (waiting for the user's OK).
+
 ## Next step
 
-Milestone 1, step 11 (last of M1): CLI `connector-forge eval --set dev|heldout --variant
-reference [--out runs/<file>.json]` running `evaluate()` per scenario, printing a compact
-table and writing JSON (with machine + date). Test via `cli.main([...])` on one scenario.
-Then run the employer-terms checks and mark milestone 1 done.
+Milestone 2, step 1: API docs per scenario. `src/connector_forge/docs.py` renders a
+Markdown API reference from a Scenario (base URL placeholder, auth, pagination, resources
+and field types, `updated_since`, rate limits, soft deletes) — the only input agents get.
+Tests: docs mention every resource path, field and auth detail; no ground-truth data.
