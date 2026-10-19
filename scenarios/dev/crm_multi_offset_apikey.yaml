@@ -1,0 +1,17 @@
+name: crm_multi_offset_apikey
+description: Two resources (companies and deals) behind one API key.
+seed: 11
+auth: {type: api_key, header: X-API-Key, secret: dev-key-crm}
+pagination: {type: offset, page_size: 20}
+resources:
+- name: companies
+  path: /companies
+  count: 40
+  fields: {id: int, name: string, employees: int, updated_at: timestamp}
+  incremental: true
+- name: deals
+  path: /deals
+  count: 70
+  fields: {id: int, company_id: int, value: float, stage: string, updated_at: timestamp}
+  incremental: true
+changes: {created: 4, updated: 5, deleted: 0}

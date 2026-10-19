@@ -1,0 +1,13 @@
+name: users_page_oauth_softdelete
+description: Users with page pagination, OAuth, and soft deletes.
+seed: 7
+auth: {type: oauth_client_credentials, client_id: forge-dev, secret: dev-secret-users}
+pagination: {type: page, page_size: 20}
+resources:
+- name: users
+  path: /users
+  count: 55
+  fields: {id: int, name: name, email: email, active: bool, updated_at: timestamp}
+  incremental: true
+  soft_deletes: true
+changes: {created: 3, updated: 6, deleted: 4}

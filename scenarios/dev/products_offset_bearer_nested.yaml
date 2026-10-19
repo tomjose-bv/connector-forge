@@ -1,0 +1,17 @@
+name: products_offset_bearer_nested
+description: Products with nested price and dimensions objects.
+seed: 5
+auth: {type: bearer, secret: dev-token-products}
+pagination: {type: offset, page_size: 30}
+resources:
+- name: products
+  path: /products
+  count: 80
+  fields:
+    id: int
+    title: string
+    price: {amount: float, currency: string}
+    dimensions: {width: float, height: float, unit: string}
+    updated_at: timestamp
+  incremental: true
+changes: {created: 5, updated: 6, deleted: 0}

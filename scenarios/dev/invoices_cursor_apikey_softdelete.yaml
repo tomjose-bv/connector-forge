@@ -1,0 +1,13 @@
+name: invoices_cursor_apikey_softdelete
+description: Invoices with cursor pagination; deleted invoices are flagged, not removed.
+seed: 6
+auth: {type: api_key, header: X-API-Key, secret: dev-key-invoices}
+pagination: {type: cursor, page_size: 20}
+resources:
+- name: invoices
+  path: /invoices
+  count: 65
+  fields: {id: int, number: string, amount: float, updated_at: timestamp}
+  incremental: true
+  soft_deletes: true
+changes: {created: 4, updated: 4, deleted: 5}

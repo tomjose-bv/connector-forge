@@ -1,0 +1,12 @@
+name: tickets_cursor_oauth
+description: Support tickets with cursor pagination and OAuth client credentials.
+seed: 3
+auth: {type: oauth_client_credentials, client_id: forge-dev, secret: dev-secret-tickets}
+pagination: {type: cursor, page_size: 15}
+resources:
+- name: tickets
+  path: /tickets
+  count: 60
+  fields: {id: int, subject: string, requester: email, updated_at: timestamp}
+  incremental: true
+changes: {created: 4, updated: 5, deleted: 0}

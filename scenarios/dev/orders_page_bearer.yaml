@@ -1,0 +1,12 @@
+name: orders_page_bearer
+description: Orders with page-number pagination and a static bearer token.
+seed: 2
+auth: {type: bearer, secret: dev-token-orders}
+pagination: {type: page, page_size: 25}
+resources:
+- name: orders
+  path: /orders
+  count: 90
+  fields: {id: int, customer: name, total: float, paid: bool, updated_at: timestamp}
+  incremental: true
+changes: {created: 6, updated: 7, deleted: 0}

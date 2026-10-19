@@ -1,0 +1,14 @@
+name: projects_offset_oauth_ratelimit_softdelete
+description: Projects with OAuth, a rate limit and soft deletes.
+seed: 15
+auth: {type: oauth_client_credentials, client_id: forge-dev, secret: dev-secret-projects}
+pagination: {type: offset, page_size: 15}
+rate_limit: {requests: 5, per_seconds: 1, retry_after: 1}
+resources:
+- name: projects
+  path: /projects
+  count: 50
+  fields: {id: int, name: string, owner: email, budget: float, updated_at: timestamp}
+  incremental: true
+  soft_deletes: true
+changes: {created: 3, updated: 4, deleted: 3}

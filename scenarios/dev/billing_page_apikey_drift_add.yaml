@@ -1,0 +1,15 @@
+name: billing_page_apikey_drift_add
+description: Subscriptions; a new field appears after the first sync.
+seed: 14
+auth: {type: api_key, header: X-API-Key, secret: dev-key-billing}
+pagination: {type: page, page_size: 20}
+resources:
+- name: subscriptions
+  path: /subscriptions
+  count: 45
+  fields: {id: int, plan: string, seats: int, updated_at: timestamp}
+  incremental: true
+changes: {created: 3, updated: 5, deleted: 0}
+drift:
+  add:
+    subscriptions: {discount: float}

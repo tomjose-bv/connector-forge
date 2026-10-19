@@ -1,0 +1,23 @@
+name: shop_multi_cursor_oauth
+description: Customers and orders with nested shipping addresses.
+seed: 12
+auth: {type: oauth_client_credentials, client_id: forge-dev, secret: dev-secret-shop}
+pagination: {type: cursor, page_size: 25}
+resources:
+- name: customers
+  path: /customers
+  count: 35
+  fields: {id: int, name: name, email: email, updated_at: timestamp}
+  incremental: true
+- name: orders
+  path: /orders
+  count: 60
+  fields:
+    id: int
+    customer_id: int
+    total: float
+    shipping: {city: string, zip: string}
+    updated_at: timestamp
+  incremental: true
+  soft_deletes: true
+changes: {created: 3, updated: 4, deleted: 2}

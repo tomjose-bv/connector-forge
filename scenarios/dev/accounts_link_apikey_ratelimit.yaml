@@ -1,0 +1,13 @@
+name: accounts_link_apikey_ratelimit
+description: Accounts with Link pagination, an API key and a strict rate limit.
+seed: 8
+auth: {type: api_key, header: X-Api-Token, secret: dev-key-accounts}
+pagination: {type: link, page_size: 10}
+rate_limit: {requests: 4, per_seconds: 1, retry_after: 1}
+resources:
+- name: accounts
+  path: /accounts
+  count: 50
+  fields: {id: int, company: string, plan: string, updated_at: timestamp}
+  incremental: true
+changes: {created: 3, updated: 4, deleted: 0}

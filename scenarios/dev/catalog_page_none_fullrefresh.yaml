@@ -1,0 +1,10 @@
+name: catalog_page_none_fullrefresh
+description: Catalog categories without timestamps; full refresh with hard deletes.
+seed: 16
+pagination: {type: page, page_size: 10}
+resources:
+- name: categories
+  path: /categories
+  count: 30
+  fields: {id: int, label: string, parent_id: int}
+changes: {created: 3, updated: 4, deleted: 3}

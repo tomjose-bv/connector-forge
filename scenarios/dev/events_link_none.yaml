@@ -1,0 +1,11 @@
+name: events_link_none
+description: Public events feed with Link-header pagination and no auth.
+seed: 4
+pagination: {type: link, page_size: 20}
+resources:
+- name: events
+  path: /events
+  count: 70
+  fields: {id: int, kind: string, score: int, updated_at: timestamp}
+  incremental: true
+changes: {created: 8, updated: 3, deleted: 0}

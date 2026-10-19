@@ -1,0 +1,12 @@
+name: tasks_offset_none_ratelimit
+description: Tasks with offset pagination, no auth, and a rate limit.
+seed: 9
+pagination: {type: offset, page_size: 10}
+rate_limit: {requests: 5, per_seconds: 1, retry_after: 1}
+resources:
+- name: tasks
+  path: /tasks
+  count: 45
+  fields: {id: int, title: string, done: bool, updated_at: timestamp}
+  incremental: true
+changes: {created: 2, updated: 5, deleted: 0}

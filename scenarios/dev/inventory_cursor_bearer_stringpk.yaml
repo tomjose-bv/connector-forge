@@ -1,0 +1,12 @@
+name: inventory_cursor_bearer_stringpk
+description: Inventory snapshot keyed by SKU string; full refresh only.
+seed: 10
+auth: {type: bearer, secret: dev-token-inventory}
+pagination: {type: cursor, page_size: 25}
+resources:
+- name: stock
+  path: /stock
+  count: 60
+  fields: {sku: string, warehouse: string, quantity: int}
+  primary_key: sku
+changes: {created: 5, updated: 8, deleted: 4}

@@ -22,9 +22,15 @@
   violations, requests, seconds, errors. Non-incremental resources are full-refreshed on
   sync 2; hard deletes on incremental resources count as invisible. 38 tests passing.
 
+- M1.7 16 dev scenarios in `scenarios/dev/` (all auth types × all pagination styles, rate
+  limits, soft deletes, nested JSON, string pk, multi-resource, full refresh, drift
+  rename/add) + load test for every scenario file. 55 tests passing.
+
 ## Next step
 
-Milestone 1, step 7: development scenarios. Write ~16 YAML files in `scenarios/dev/` covering
-the auth × pagination matrix, rate limits, soft deletes, nested JSON, string primary keys,
-multiple resources, and drift (rename/add). Add a test that every file in `scenarios/` loads
-and that names match filenames. (Held-out set comes in its own later commit, step 9.)
+Milestone 1, step 8: reference connectors. Shared helper `connectors/reference/_http.py`
+is NOT allowed (each connector must be one self-contained file, like generated ones). Write
+`connectors/reference/<scenario>.py` for each dev scenario (stdlib urllib only; handles auth,
+pagination, `updated_since`, 429 + Retry-After). Start with the 4 simplest (one per
+pagination style); add a parametrized test that `evaluate()` gives 100% full + incremental
+accuracy, 1.0 schema accuracy, 0 rate violations for every reference connector present.

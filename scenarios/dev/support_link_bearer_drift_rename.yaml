@@ -1,0 +1,15 @@
+name: support_link_bearer_drift_rename
+description: Conversations; a field is renamed after the first sync.
+seed: 13
+auth: {type: bearer, secret: dev-token-support}
+pagination: {type: link, page_size: 20}
+resources:
+- name: conversations
+  path: /conversations
+  count: 50
+  fields: {id: int, subject: string, assignee: email, updated_at: timestamp}
+  incremental: true
+changes: {created: 4, updated: 4, deleted: 0}
+drift:
+  rename:
+    conversations: {assignee: assignee_email}
