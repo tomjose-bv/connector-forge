@@ -51,6 +51,10 @@
   audit-hook guard for network/DNS/file writes/processes, blocked-call log).
   `evaluate(sandbox=True)`, Report.blocked. All 21 reference connectors perfect in the
   sandbox. README section. 116 tests passing.
+- M2.3 Agent tools: `tools.py` ToolBox (read_docs, probe_api with auth added and pages
+  shortened to 2 records + pagination fields, write_connector with versions + syntax check,
+  run_tests = sandboxed evaluate + short summary, submit). Guard: path-only GETs to the mock
+  API, per-tool limits, unknown tools blocked, every call logged. 122 tests passing.
 
 ## Ideas for later
 
@@ -58,8 +62,7 @@
 
 ## Next step
 
-Milestone 2, step 3: agent tools + guard. `src/connector_forge/tools.py`: a ToolBox for one
-scenario run with read_docs(), probe_api(path, params) (GET to the mock API only, with auth
-handled by the toolbox, response truncated), write_connector(code) (saved in the run dir),
-run_tests() (sandboxed evaluate, short diff report), submit(). Guard: per-tool call limits,
-only mock-API paths, every call logged. Tests without a model.
+Milestone 2, step 4: LLM client. `src/connector_forge/llm.py`: OllamaClient.chat(messages)
+-> text via http://127.0.0.1:11434/api/chat (stdlib, lazy, temperature + seed options,
+returns token counts from prompt_eval_count/eval_count), and a FakeLLM with scripted replies
+for tests. Helper extract_code(text) pulling the python block out of a reply.
