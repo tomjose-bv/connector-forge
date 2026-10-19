@@ -33,10 +33,11 @@
 - M1.8b Reference connectors for all 16 dev scenarios, all scoring 1.0 on every metric with
   0 rate violations (rate-limited scenarios do hit a 429 each). 72 tests passing (~17 s).
 
+- M1.9 5 held-out scenarios in `scenarios/heldout/`, committed on their own before any
+  agent code exists. 77 tests passing.
+
 ## Next step
 
-Milestone 1, step 9: held-out scenarios, in their own commit before any agent exists.
-5 YAML files in `scenarios/heldout/` with combinations not in the dev set (e.g. cursor +
-api_key + rate limit + nested; link + oauth + soft deletes; multi-resource page + bearer;
-string pk incremental; offset + oauth + drift rename). No reference connectors are written
-for them yet (step 10 adds them, kept out of any agent prompt).
+Milestone 1, step 10: reference connectors for the 5 held-out scenarios in
+`connectors/reference/heldout/` (proves the harness on them; never shown to agents), and
+extend `tests/test_reference.py` to cover both sets.

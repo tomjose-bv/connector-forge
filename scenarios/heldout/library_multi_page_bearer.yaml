@@ -1,0 +1,21 @@
+name: library_multi_page_bearer
+description: Authors, books and loans behind one bearer token.
+seed: 103
+auth: {type: bearer, secret: ho-token-library}
+pagination: {type: page, page_size: 20}
+resources:
+- name: authors
+  path: /authors
+  count: 25
+  fields: {id: int, name: name, updated_at: timestamp}
+  incremental: true
+- name: books
+  path: /books
+  count: 60
+  fields: {id: int, author_id: int, title: string, pages: int, updated_at: timestamp}
+  incremental: true
+- name: loans
+  path: /loans
+  count: 40
+  fields: {id: int, book_id: int, member: email, returned: bool}
+changes: {created: 3, updated: 4, deleted: 0}

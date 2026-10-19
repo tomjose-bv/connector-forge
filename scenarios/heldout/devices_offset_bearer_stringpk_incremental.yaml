@@ -1,0 +1,14 @@
+name: devices_offset_bearer_stringpk_incremental
+description: IoT devices keyed by serial string, incremental with soft deletes.
+seed: 104
+auth: {type: bearer, secret: ho-token-devices}
+pagination: {type: offset, page_size: 25}
+resources:
+- name: devices
+  path: /devices
+  count: 70
+  fields: {serial: string, model: string, firmware: string, online: bool, updated_at: timestamp}
+  primary_key: serial
+  incremental: true
+  soft_deletes: true
+changes: {created: 5, updated: 6, deleted: 3}

@@ -1,0 +1,13 @@
+name: members_link_oauth_softdelete
+description: Community members with Link pagination, OAuth and soft deletes.
+seed: 102
+auth: {type: oauth_client_credentials, client_id: forge-ho, secret: ho-secret-members}
+pagination: {type: link, page_size: 15}
+resources:
+- name: members
+  path: /members
+  count: 60
+  fields: {id: int, handle: string, email: email, karma: int, updated_at: timestamp}
+  incremental: true
+  soft_deletes: true
+changes: {created: 4, updated: 4, deleted: 4}

@@ -1,0 +1,19 @@
+name: shipments_cursor_apikey_ratelimit_nested
+description: Shipments with nested origin and destination, cursor pagination and a rate limit.
+seed: 101
+auth: {type: api_key, header: X-Shipping-Key, secret: ho-key-shipments}
+pagination: {type: cursor, page_size: 12}
+rate_limit: {requests: 4, per_seconds: 1, retry_after: 1}
+resources:
+- name: shipments
+  path: /shipments
+  count: 55
+  fields:
+    id: int
+    carrier: string
+    weight: float
+    origin: {city: string, zip: string}
+    destination: {city: string, zip: string}
+    updated_at: timestamp
+  incremental: true
+changes: {created: 4, updated: 5, deleted: 0}

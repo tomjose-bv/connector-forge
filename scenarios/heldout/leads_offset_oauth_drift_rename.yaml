@@ -1,0 +1,17 @@
+name: leads_offset_oauth_drift_rename
+description: Sales leads; a field is renamed and one is added after the first sync.
+seed: 105
+auth: {type: oauth_client_credentials, client_id: forge-ho, secret: ho-secret-leads}
+pagination: {type: offset, page_size: 20}
+resources:
+- name: leads
+  path: /leads
+  count: 50
+  fields: {id: int, name: name, source: string, score: int, updated_at: timestamp}
+  incremental: true
+changes: {created: 3, updated: 5, deleted: 0}
+drift:
+  rename:
+    leads: {source: lead_source}
+  add:
+    leads: {region: string}
