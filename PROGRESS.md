@@ -36,8 +36,12 @@
 - M1.9 5 held-out scenarios in `scenarios/heldout/`, committed on their own before any
   agent code exists. 77 tests passing.
 
+- M1.10 Reference connectors for the 5 held-out scenarios in
+  `connectors/reference/heldout/` (never to be shown to agents); all perfect. 83 tests.
+
 ## Next step
 
-Milestone 1, step 10: reference connectors for the 5 held-out scenarios in
-`connectors/reference/heldout/` (proves the harness on them; never shown to agents), and
-extend `tests/test_reference.py` to cover both sets.
+Milestone 1, step 11 (last of M1): CLI `connector-forge eval --set dev|heldout --variant
+reference [--out runs/<file>.json]` running `evaluate()` per scenario, printing a compact
+table and writing JSON (with machine + date). Test via `cli.main([...])` on one scenario.
+Then run the employer-terms checks and mark milestone 1 done.
