@@ -26,11 +26,12 @@
   limits, soft deletes, nested JSON, string pk, multi-resource, full refresh, drift
   rename/add) + load test for every scenario file. 55 tests passing.
 
+- M1.8a Reference connectors for 4 scenarios (one per pagination style) in
+  `connectors/reference/`, self-contained, stdlib only + `tests/test_reference.py` asserting
+  perfect scores. 59 tests passing.
+
 ## Next step
 
-Milestone 1, step 8: reference connectors. Shared helper `connectors/reference/_http.py`
-is NOT allowed (each connector must be one self-contained file, like generated ones). Write
-`connectors/reference/<scenario>.py` for each dev scenario (stdlib urllib only; handles auth,
-pagination, `updated_since`, 429 + Retry-After). Start with the 4 simplest (one per
-pagination style); add a parametrized test that `evaluate()` gives 100% full + incremental
-accuracy, 1.0 schema accuracy, 0 rate violations for every reference connector present.
+Milestone 1, step 8b: reference connectors for the remaining 12 dev scenarios (same
+structure as the existing 4: RESOURCES dict, `_request` with 429 retry, `_auth_headers`,
+`_pages`, `sync`). Then add a test that every dev scenario has a reference connector.
