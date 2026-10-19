@@ -13,11 +13,15 @@
   credentials; offset/page/cursor/link pagination; `updated_since`; 429 + Retry-After with
   violation count; request log; phases initial/changed/drifted). 27 tests passing.
 - Ollama model `qwen2.5-coder:3b` pulled.
+- M1.5 Harness core: `harness.py` (connector contract in docstring, `load_connector`,
+  `config_for`, DuckDB `Warehouse` with upsert by pk, `run_sync` capturing connector errors,
+  `compare` → matched/missing/mismatched/extra/accuracy). 32 tests passing.
 
 ## Next step
 
-Milestone 1, step 5: connector contract + harness core. `src/connector_forge/harness.py`:
-load a connector module from a file path (`schema()` and `sync(config, state)` generator
-whose return value is the next state); run a full sync against a MockAPI, load records into
-DuckDB (one table per resource, nested values as JSON), compare with ground truth by primary
-key to get row accuracy. Tests with a tiny in-test connector.
+Milestone 1, step 6: full evaluation run. `harness.evaluate(scenario, connector_path)`:
+sync 1 (initial) → score full-sync accuracy; set phase "changed" → sync 2 with returned state
+→ score incremental correctness (final table == truth incl. soft deletes; count duplicates
+fetched, missed updates, missed deletes); schema accuracy (connector `schema()` vs scenario
+fields); rate-limit violations; request count and time. Return a `Report` dataclass
+(+ `to_dict`). Tests with in-test connectors.
