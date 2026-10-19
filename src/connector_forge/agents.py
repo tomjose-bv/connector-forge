@@ -141,3 +141,76 @@ def run_probe(scenario: Scenario, llm: LLM, run_dir: Path, max_probes: int = 6, 
 
 
 AGENTS = {"prompt": run_prompt, "probe": run_probe}
+
+
+FIX_PROMPT = """Your connector was tested against the API: a full sync, then the API data changed and an
+incremental sync ran with the state your first sync returned.
+
+Test results:
+{results}
+
+Current module:
+```python
+{code}
+```
+
+Find the bugs and reply with the complete fixed module in one ```python block."""
+
+
+def score(rep: dict[str, Any] | None) -> float:
+    """Rank connector versions: accuracy first, then rate-limit compliance and efficiency."""
+    if not rep:
+        return -1.0
+    s = rep["full_sync_accuracy"] + rep["incremental_accuracy"] + rep["schema_accuracy"]
+    s -= 0.1 * min(rep["rate_violations"], 5) + 0.05 * bool(rep["refetched"]) + 0.2 * bool(rep["errors"])
+    return s
+
+
+def _probe_turn(tb: ToolBox, llm: LLM, messages: list[dict[str, str]], max_probes: int) -> str:
+    reply = llm.chat(messages)
+    probes = PROBE_LINE.findall(reply)
+    if probes and extract_code(reply) is None:
+        results = [f"PROBE {p}\n{tb.call('probe_api', {'path': p})}" for p in probes[:max_probes]]
+        messages += [
+            {"role": "assistant", "content": reply},
+            {"role": "user", "content": "\n\n".join(results) + "\n\nNow write the full module."},
+        ]
+        reply = llm.chat(messages)
+    return reply
+
+
+def run_graph(scenario: Scenario, llm: LLM, run_dir: Path, rounds: int = 4, max_probes: int = 4) -> AgentResult:
+    """Fixed plan: probe -> write -> (test -> fix) x rounds. The best tested version is final."""
+    started = time.monotonic()
+    limits = {"read_docs": 1, "probe_api": max_probes, "write_connector": rounds + 2, "run_tests": rounds + 1, "submit": 1}
+    with ToolBox(scenario, run_dir, limits=limits) as tb:
+        docs = tb.call("read_docs")
+        system = CONTRACT + "\n" + PROBE_HELP.format(n=max_probes)
+        reply = _probe_turn(tb, llm, _messages(system, f"API documentation:\n\n{docs}\n\nProbe the API if useful, "
+                                                        "then write the connector module."), max_probes)
+        best: tuple[float, str, Any] | None = None
+        code, error, used = None, None, 0
+        for used in range(1, rounds + 1):
+            error = _write(tb, reply)
+            if error and "no Python code" in error:
+                results = "Your reply had no ```python code block."
+            else:
+                code = tb.connector_path.read_text(encoding="utf-8")
+                results = tb.call("run_tests")
+                s = score(tb.last_report.to_dict() if tb.last_report else None)
+                if best is None or s > best[0]:
+                    best = (s, code, tb.last_report)
+                if "ALL CHECKS PASSED" in results:
+                    break
+            if used == rounds:
+                break
+            reply = llm.chat(_messages(CONTRACT, f"API documentation:\n\n{docs}\n\n"
+                                                 + FIX_PROMPT.format(results=results, code=code or "(none)")))
+        if best is not None:
+            tb.connector_path.write_text(best[1], encoding="utf-8")
+            tb.last_report = best[2]
+            error = None
+        return _finish("graph", scenario, llm, tb, started, rounds=used, error=error)
+
+
+AGENTS["graph"] = run_graph

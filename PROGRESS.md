@@ -70,6 +70,9 @@
   counts plus one field-level example of a wrong row; run_tests summary shows them (feedback
   for the fix loop). M2.7 baseline runs (prompt, probe; dev; seed 1) started in background
   into runs/baseline-*-dev-s1. 132 tests passing.
+- M3.2 `graph` agent: one probe turn, then write -> run_tests -> fix for up to 4 rounds with
+  small context (contract + docs + current code + test output); best-scoring version kept as
+  final; `--variant graph` in CLI. 135 tests passing.
 
 ## Ideas for later
 
@@ -77,8 +80,6 @@
 
 ## Next step
 
-Milestone 3, step 2: graph agent in agents.py: probe turn (max 4 probes) -> write -> loop up
-to N=4 rounds of run_tests -> fix (context kept small: system + docs + last code + last test
-output), keep the best-scoring version as the final connector. Tests with FakeLLM (fixes
-after a failing round; stops when all checks pass; best version kept). When the baseline
-runs finish, record their failure categories here.
+Milestone 3, step 3: when the M2.7 baselines finish, run graph on all dev scenarios (seed 1)
+and compare with prompt/probe; record failure categories and what the fix loop solves in
+PROGRESS.md. Then milestone 4: drift phase in evaluate + graph+repair.

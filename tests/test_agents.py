@@ -44,3 +44,35 @@ def test_probe_limit_is_guarded(tmp_path):
     llm = FakeLLM(["\n".join(["PROBE /events"] * 5), FENCED])
     r = run_probe(SCEN, llm, tmp_path, max_probes=2)
     assert sum(1 for c in r.tool_log if c["tool"] == "probe_api") == 2
+
+
+def test_graph_fixes_after_failing_round(tmp_path):
+    from connector_forge.agents import run_graph
+
+    broken = REF.replace("yield name, record", "yield name, {**record, 'kind': 'x'}")
+    llm = FakeLLM([f"```python\n{broken}```", FENCED])
+    r = run_graph(SCEN, llm, tmp_path, rounds=4)
+    assert r.rounds == 2 and r.report["full_sync_accuracy"] == 1.0
+    fix_prompt = llm.seen[1][1]["content"]
+    assert "SOME CHECKS FAILED" in fix_prompt and "example wrong row" in fix_prompt
+    assert "'kind': 'x'" in fix_prompt  # current code included
+
+
+def test_graph_keeps_best_version(tmp_path):
+    from connector_forge.agents import run_graph
+
+    half = REF.replace("yield name, record", "yield name, {**record, 'kind': 'x'}")
+    worse = "def schema():\n    return {}\ndef sync(config, state):\n    raise ValueError('boom')\n    yield\n"
+    llm = FakeLLM(["PROBE /events", FENCED.replace(REF, half), f"```python\n{worse}```", "no code at all"])
+    r = run_graph(SCEN, llm, tmp_path, rounds=3)
+    assert r.rounds == 3
+    assert r.report["schema_accuracy"] == 1.0 and r.report["errors"] == []
+    assert "'kind': 'x'" in (tmp_path / "connector.py").read_text()
+
+
+def test_graph_stops_when_perfect(tmp_path):
+    from connector_forge.agents import run_graph
+
+    llm = FakeLLM([FENCED])
+    r = run_graph(SCEN, llm, tmp_path)
+    assert r.rounds == 1 and r.llm_calls == 1 and r.report["incremental_accuracy"] == 1.0
