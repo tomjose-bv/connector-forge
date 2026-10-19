@@ -44,13 +44,9 @@
   history). 84 tests passing (~12 s).
 - **Milestone 1 done.**
 
-## Ideas for later (not planned yet)
+## Ideas for later
 
-- v5–v6 idea from the user: an agent platform where a customer describes a business problem
-  in natural language ("revenue dipped last quarter, why?"); the agent asks which apps they
-  use, builds connectors, loads the data and diagnoses the cause. Possible measurable
-  version: synthetic multi-app business with a planted root cause; score whether the agent
-  finds it. Not added to PLAN.md yet (waiting for the user's OK).
+- Business-question agent platform: added to PLAN.md under "Future direction".
 
 ## Next step
 

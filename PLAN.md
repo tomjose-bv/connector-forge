@@ -67,3 +67,25 @@ scenario YAML ──► mock API (localhost) ◄── connector code runs here 
 
 Python 3.12, duckdb, pyyaml, pytest. Ollama with `qwen2.5-coder:3b` (optional
 `qwen2.5-coder:7b`). No web framework.
+
+## Future direction (after v0.1.0, roughly v5–v6)
+
+An agent that starts from a business question instead of an API. A user describes a problem
+in plain language ("revenue dipped last quarter, what happened?" or "marketing spend spiked
+last month"). The agent:
+
+1. **Clarifies the question:** which metric, which period, compared with what.
+2. **Asks which apps hold the data** (CRM, ads, billing, analytics) and proposes connections.
+3. **Builds and tests the connectors** with connector-forge, and loads the data into DuckDB.
+4. **Models the metrics:** joins sources into a few definitions such as revenue and spend
+   by channel, campaign, region and week.
+5. **Diagnoses the change:** breaks the delta down by dimension, ranks the contributors and
+   explains them with evidence (queries and numbers), not guesses.
+
+Evaluated the same way as the connector work: a synthetic multi-app business with a planted
+root cause (for example one campaign overspending in one region). Scores: did the agent ask
+for the right sources, connect them correctly, and find the planted cause.
+
+Open questions: real SaaS APIs need real OAuth apps and terms-of-use review; holding user
+credentials would make this a hosted product with security obligations; multi-step analysis
+likely needs a stronger local model than the 3B one used for connector code.
