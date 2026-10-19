@@ -17,11 +17,14 @@
   `config_for`, DuckDB `Warehouse` with upsert by pk, `run_sync` capturing connector errors,
   `compare` → matched/missing/mismatched/extra/accuracy). 32 tests passing.
 
+- M1.6 `harness.evaluate()` → `Report`: full-sync and incremental accuracy, refetched,
+  missed updates/deletes, schema accuracy (field Jaccard, pk must match), 429s, rate
+  violations, requests, seconds, errors. Non-incremental resources are full-refreshed on
+  sync 2; hard deletes on incremental resources count as invisible. 38 tests passing.
+
 ## Next step
 
-Milestone 1, step 6: full evaluation run. `harness.evaluate(scenario, connector_path)`:
-sync 1 (initial) → score full-sync accuracy; set phase "changed" → sync 2 with returned state
-→ score incremental correctness (final table == truth incl. soft deletes; count duplicates
-fetched, missed updates, missed deletes); schema accuracy (connector `schema()` vs scenario
-fields); rate-limit violations; request count and time. Return a `Report` dataclass
-(+ `to_dict`). Tests with in-test connectors.
+Milestone 1, step 7: development scenarios. Write ~16 YAML files in `scenarios/dev/` covering
+the auth × pagination matrix, rate limits, soft deletes, nested JSON, string primary keys,
+multiple resources, and drift (rename/add). Add a test that every file in `scenarios/` loads
+and that names match filenames. (Held-out set comes in its own later commit, step 9.)

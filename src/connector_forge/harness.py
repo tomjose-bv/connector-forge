@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -71,6 +71,9 @@ class Warehouse:
             f'INSERT OR REPLACE INTO "{t}" VALUES (?, ?)', [str(pk), json.dumps(record, default=str)]
         )
 
+    def clear(self, resource: str) -> None:
+        self.con.execute(f'DELETE FROM "{self._table(resource)}"')
+
     def rows(self, resource: str) -> dict[str, dict[str, Any]]:
         if resource not in self._tables:
             return {}
@@ -82,24 +85,25 @@ class SyncResult:
     state: Any
     records: int
     error: str | None = None
+    keys: list[tuple[str, str]] = field(default_factory=list)  # (resource, pk) per yielded record
 
 
 def run_sync(connector: ModuleType, scenario: Scenario, config: dict, state: Any, wh: Warehouse) -> SyncResult:
     """Run one sync, upserting each record by the scenario's primary key."""
     pks = {r.name: r.primary_key for r in scenario.resources}
-    count = 0
-    gen = connector.sync(config, state)
+    keys: list[tuple[str, str]] = []
     try:
+        gen = connector.sync(config, state)
         while True:
             resource, record = next(gen)
             if resource not in pks:
                 raise ValueError(f"unknown resource {resource!r}")
             wh.upsert(resource, record[pks[resource]], record)
-            count += 1
+            keys.append((resource, str(record[pks[resource]])))
     except StopIteration as stop:
-        return SyncResult(stop.value, count)
+        return SyncResult(stop.value, len(keys), keys=keys)
     except Exception as e:  # connector bugs are results, not harness crashes
-        return SyncResult(state, count, f"{type(e).__name__}: {e}")
+        return SyncResult(state, len(keys), f"{type(e).__name__}: {e}", keys)
 
 
 @dataclass
@@ -132,3 +136,129 @@ def compare(scenario: Scenario, truth: Dataset, wh: Warehouse) -> dict[str, Reso
             extra=sum(1 for k in got if k not in want),
         )
     return out
+
+
+def schema_accuracy(scenario: Scenario, declared: Any) -> float:
+    """Mean over resources of field-name Jaccard similarity; 0 for a resource with a wrong primary key."""
+    if not isinstance(declared, dict):
+        return 0.0
+    scores = []
+    for res in scenario.resources:
+        want = set(res.fields) | ({"deleted"} if res.soft_deletes else set())
+        got = declared.get(res.name)
+        if not isinstance(got, dict) or got.get("primary_key") != res.primary_key:
+            scores.append(0.0)
+            continue
+        names = set(got.get("fields") or {})
+        scores.append(len(want & names) / len(want | names))
+    return sum(scores) / len(scores)
+
+
+def _total_accuracy(scores: dict[str, ResourceScore]) -> float:
+    matched = sum(s.matched for s in scores.values())
+    denom = sum(s.expected + s.extra for s in scores.values())
+    return matched / denom if denom else 1.0
+
+
+@dataclass
+class Report:
+    scenario: str
+    connector: str
+    full_sync_accuracy: float
+    incremental_accuracy: float
+    refetched: int  # unchanged records fetched again by the second sync
+    missed_updates: int  # created or updated records wrong after the second sync
+    missed_deletes: int  # soft-deleted records not marked deleted after the second sync
+    schema_accuracy: float
+    rate_limited: int  # 429 responses
+    rate_violations: int  # requests sent before Retry-After elapsed
+    requests: int
+    seconds: float
+    errors: list[str]
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def _incremental_truth(scenario: Scenario, before: Dataset, after: Dataset) -> Dataset:
+    """What a correct connector can see after sync 2: hard deletes on incremental resources are invisible."""
+    out = {}
+    for res in scenario.resources:
+        recs = dict(after[res.name])
+        if res.incremental:
+            for pk, rec in before[res.name].items():
+                recs.setdefault(pk, rec)
+        out[res.name] = recs
+    return out
+
+
+def evaluate(scenario: Scenario, connector_path: str | Path) -> Report:
+    """Full sync, then an incremental sync after the API data changes; score both."""
+    import time
+
+    from connector_forge.mock_api import MockAPI
+
+    errors: list[str] = []
+    try:
+        connector = load_connector(connector_path)
+        declared = connector.schema()
+    except Exception as e:
+        connector, declared = None, None
+        errors.append(f"load: {type(e).__name__}: {e}")
+    wh = Warehouse()
+    started = time.monotonic()
+    with MockAPI(scenario) as api:
+        before, after = api.datasets["initial"], api.datasets["changed"]
+        config = config_for(scenario, api.url)
+        state = None
+        full = inc = {}
+        keys2: list[tuple[str, str]] = []
+        if connector is not None:
+            r1 = run_sync(connector, scenario, config, None, wh)
+            if r1.error:
+                errors.append(f"sync 1: {r1.error}")
+            full = compare(scenario, before, wh)
+            state = r1.state
+            api.set_phase("changed")
+            for res in scenario.resources:
+                if not res.incremental:
+                    wh.clear(res.name)  # full-refresh resources are replaced on every sync
+            r2 = run_sync(connector, scenario, config, state, wh)
+            if r2.error:
+                errors.append(f"sync 2: {r2.error}")
+            keys2 = r2.keys
+        truth2 = _incremental_truth(scenario, before, after)
+        inc = compare(scenario, truth2, wh) if connector is not None else {}
+        rate_limited = sum(1 for e in api.log if e.status == 429)
+        violations, requests = api.rate_violations, len(api.log)
+
+    refetched = missed_updates = missed_deletes = 0
+    for res in scenario.resources:
+        if not res.incremental:
+            continue
+        old = {str(k): _norm(v) for k, v in before[res.name].items()}
+        new = {str(k): _norm(v) for k, v in after[res.name].items()}
+        got = wh.rows(res.name)
+        refetched += sum(1 for r, pk in keys2 if r == res.name and pk in new and old.get(pk) == new[pk])
+        for pk, rec in new.items():
+            if old.get(pk) != rec and got.get(pk) != rec:
+                if rec.get("deleted") is True:
+                    missed_deletes += 1
+                else:
+                    missed_updates += 1
+
+    return Report(
+        scenario=scenario.name,
+        connector=str(connector_path),
+        full_sync_accuracy=_total_accuracy(full) if full else 0.0,
+        incremental_accuracy=_total_accuracy(inc) if inc else 0.0,
+        refetched=refetched,
+        missed_updates=missed_updates,
+        missed_deletes=missed_deletes,
+        schema_accuracy=schema_accuracy(scenario, declared),
+        rate_limited=rate_limited,
+        rate_violations=violations,
+        requests=requests,
+        seconds=round(time.monotonic() - started, 3),
+        errors=errors,
+    )
