@@ -66,6 +66,10 @@
   connector versions, result.json, summary.json with machine/date). Smoke run (2 dev
   scenarios, prompt, qwen2.5-coder:3b): code runs but has typical bugs (URL built outside
   the page loop; state.get on None). 131 tests passing.
+- M3.1 Report.details: per phase and resource expected/matched/missing/wrong/unexpected
+  counts plus one field-level example of a wrong row; run_tests summary shows them (feedback
+  for the fix loop). M2.7 baseline runs (prompt, probe; dev; seed 1) started in background
+  into runs/baseline-*-dev-s1. 132 tests passing.
 
 ## Ideas for later
 
@@ -73,6 +77,8 @@
 
 ## Next step
 
-Milestone 2, step 7: baseline runs of prompt and probe on all 16 dev scenarios, seed 1
-(runs/ is gitignored; keep summary.json). Record the observed failure categories in
-PROGRESS.md. Then milestone 3: graph agent.
+Milestone 3, step 2: graph agent in agents.py: probe turn (max 4 probes) -> write -> loop up
+to N=4 rounds of run_tests -> fix (context kept small: system + docs + last code + last test
+output), keep the best-scoring version as the final connector. Tests with FakeLLM (fixes
+after a failing round; stops when all checks pass; best version kept). When the baseline
+runs finish, record their failure categories here.

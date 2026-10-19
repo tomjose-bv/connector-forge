@@ -199,6 +199,15 @@ def summarize(r) -> str:
     ]
     if r.blocked:
         lines.append(f"sandbox blocked calls: {r.blocked}")
+    for phase, per in (r.details or {}).items():
+        for res, d in per.items():
+            if d["matched"] != d["expected"] or d["extra"]:
+                lines.append(
+                    f"{phase} sync, {res}: expected {d['expected']} rows, matched {d['matched']}, "
+                    f"missing {d['missing']}, wrong {d['mismatched']}, unexpected {d['extra']}"
+                )
+                if d.get("example"):
+                    lines.append(f"  example wrong row: {d['example'][:300]}")
     lines += [f"error: {e[:300]}" for e in r.errors[:3]]
     perfect = (
         not r.errors and r.full_sync_accuracy == 1 and r.incremental_accuracy == 1 and r.schema_accuracy == 1

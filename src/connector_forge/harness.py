@@ -176,6 +176,7 @@ class Report:
     seconds: float
     errors: list[str]
     blocked: int = 0  # calls blocked by the sandbox guard
+    details: dict[str, Any] = field(default_factory=dict)  # per-phase, per-resource counts and a diff sample
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -203,6 +204,7 @@ def evaluate(scenario: Scenario, connector_path: str | Path, sandbox: bool = Fal
     from connector_forge.mock_api import MockAPI
 
     errors: list[str] = []
+    details: dict[str, Any] = {}
     wh = Warehouse()
     started = time.monotonic()
     with MockAPI(scenario) as api:
@@ -227,6 +229,7 @@ def evaluate(scenario: Scenario, connector_path: str | Path, sandbox: bool = Fal
             if r1.error:
                 errors.append(f"sync 1: {r1.error}")
             full = compare(scenario, before, wh)
+            details["full"] = _detail(scenario, before, wh, full)
             state = r1.state
             api.set_phase("changed")
             for res in scenario.resources:
@@ -238,6 +241,8 @@ def evaluate(scenario: Scenario, connector_path: str | Path, sandbox: bool = Fal
             keys2 = r2.keys
         truth2 = _incremental_truth(scenario, before, after)
         inc = compare(scenario, truth2, wh) if connector is not None else {}
+        if inc:
+            details["incremental"] = _detail(scenario, truth2, wh, inc)
         rate_limited = sum(1 for e in api.log if e.status == 429)
         violations, requests = api.rate_violations, len(api.log)
         blocked = len(getattr(connector, "blocked", []))
@@ -272,4 +277,26 @@ def evaluate(scenario: Scenario, connector_path: str | Path, sandbox: bool = Fal
         seconds=round(time.monotonic() - started, 3),
         errors=errors,
         blocked=blocked,
+        details=details,
     )
+
+
+def _detail(scenario: Scenario, truth: Dataset, wh: Warehouse, scores: dict[str, ResourceScore]) -> dict[str, Any]:
+    """Counts per resource, plus one example of a mismatched record (field-level)."""
+    out = {}
+    for res in scenario.resources:
+        sc = scores[res.name]
+        d: dict[str, Any] = asdict(sc)
+        if sc.mismatched:
+            got = wh.rows(res.name)
+            for pk, rec in truth[res.name].items():
+                want, have = _norm(rec), got.get(str(pk))
+                if have is not None and have != want:
+                    diffs = []
+                    for k in sorted(set(want) | set(have)):
+                        if want.get(k, "<absent>") != have.get(k, "<absent>"):
+                            diffs.append(f"{k}: expected {str(want.get(k, '<absent>'))[:60]!s}, got {str(have.get(k, '<absent>'))[:60]!s}")
+                    d["example"] = f"{res.primary_key}={pk}: " + "; ".join(diffs[:4])
+                    break
+        out[res.name] = d
+    return out

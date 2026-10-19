@@ -58,3 +58,13 @@ def test_run_tests_reports_failure(tmp_path):
         tb.call("write_connector", {"code": bad})
         out = tb.call("run_tests")
     assert "SOME CHECKS FAILED" in out and "boom" in out
+
+
+def test_run_tests_shows_details(tmp_path):
+    ref = (ROOT / "connectors/reference/tickets_cursor_oauth.py").read_text()
+    broken = ref.replace('yield name, record', 'yield name, {**record, "subject": "x"}')
+    with box(tmp_path) as tb:
+        tb.call("write_connector", {"code": broken})
+        out = tb.call("run_tests")
+    assert "full sync, tickets: expected 60 rows, matched 0" in out
+    assert "example wrong row: id=" in out and "subject: expected" in out
