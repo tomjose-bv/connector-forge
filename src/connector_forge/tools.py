@@ -61,6 +61,7 @@ class ToolBox:
     run_dir: Path
     limits: dict[str, int] = field(default_factory=lambda: dict(DEFAULT_LIMITS))
     allow_probe: bool = True
+    drifted: bool = False  # probe and test against the API after its schema drift
     log: list[ToolCall] = field(default_factory=list)
     submitted: bool = False
     versions: int = 0
@@ -78,6 +79,8 @@ class ToolBox:
             from connector_forge.mock_api import MockAPI
 
             self._api = MockAPI(self.scenario).start()
+            if self.drifted:
+                self._api.set_phase("drifted")
         return self
 
     def __exit__(self, *exc) -> None:
@@ -176,6 +179,12 @@ class ToolBox:
 
         if not self.connector_path.exists():
             return "error: no connector saved yet; call write_connector first"
+        if self.drifted:
+            from connector_forge.harness import evaluate_drift
+
+            d = evaluate_drift(self.scenario, self.connector_path, sandbox=True, timeout=60)
+            self.last_report = d
+            return summarize_drift(d)
         r = evaluate(self.scenario, self.connector_path, sandbox=True, timeout=60)
         self.last_report = r
         return summarize(r)
@@ -199,7 +208,19 @@ def summarize(r) -> str:
     ]
     if r.blocked:
         lines.append(f"sandbox blocked calls: {r.blocked}")
-    for phase, per in (r.details or {}).items():
+    lines += _detail_lines(r.details)
+    lines += [f"error: {e[:300]}" for e in r.errors[:3]]
+    perfect = (
+        not r.errors and r.full_sync_accuracy == 1 and r.incremental_accuracy == 1 and r.schema_accuracy == 1
+        and r.rate_violations == 0 and r.refetched == 0
+    )
+    lines.append("ALL CHECKS PASSED" if perfect else "SOME CHECKS FAILED")
+    return "\n".join(lines)
+
+
+def _detail_lines(details) -> list[str]:
+    lines = []
+    for phase, per in (details or {}).items():
         for res, d in per.items():
             if d["matched"] != d["expected"] or d["extra"]:
                 lines.append(
@@ -208,12 +229,21 @@ def summarize(r) -> str:
                 )
                 if d.get("example"):
                     lines.append(f"  example wrong row: {d['example'][:300]}")
-    lines += [f"error: {e[:300]}" for e in r.errors[:3]]
-    perfect = (
-        not r.errors and r.full_sync_accuracy == 1 and r.incremental_accuracy == 1 and r.schema_accuracy == 1
-        and r.rate_violations == 0 and r.refetched == 0
-    )
-    lines.append("ALL CHECKS PASSED" if perfect else "SOME CHECKS FAILED")
+    return lines
+
+
+def summarize_drift(d) -> str:
+    lines = [
+        f"full sync accuracy on the changed API: {d.accuracy:.2f}",
+        f"schema accuracy against the changed API: {d.schema_accuracy:.2f}",
+        f"Retry-After violations: {d.rate_violations}",
+    ]
+    if d.blocked:
+        lines.append(f"sandbox blocked calls: {d.blocked}")
+    lines += _detail_lines(d.details)
+    lines += [f"error: {e[:300]}" for e in d.errors[:3]]
+    ok = not d.errors and d.accuracy == 1 and d.schema_accuracy == 1 and d.rate_violations == 0
+    lines.append("ALL CHECKS PASSED" if ok else "SOME CHECKS FAILED")
     return "\n".join(lines)
 
 

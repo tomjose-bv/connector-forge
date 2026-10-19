@@ -113,7 +113,7 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--out", help="write a JSON report here")
     ev.add_argument("--root", default=".", help="project root with scenarios/ and connectors/")
     ag = sub.add_parser("agent", help="run an AI agent on scenarios (needs Ollama)")
-    ag.add_argument("--variant", choices=("prompt", "probe", "graph"), required=True)
+    ag.add_argument("--variant", choices=("prompt", "probe", "graph", "graph+repair"), required=True)
     ag.add_argument("--set", choices=("dev", "heldout"), default="dev")
     ag.add_argument("--scenario", action="append", help="limit to this scenario (repeatable)")
     ag.add_argument("--model", default="qwen2.5-coder:3b")

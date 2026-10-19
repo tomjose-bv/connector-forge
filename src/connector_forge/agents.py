@@ -61,6 +61,8 @@ class AgentResult:
     blocked: int
     error: str | None = None
     tool_log: list[dict[str, Any]] = field(default_factory=list)
+    drift_before: dict[str, Any] | None = None  # final connector vs the drifted API, before any repair
+    drift_after: dict[str, Any] | None = None  # after repair (graph+repair only)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -76,6 +78,11 @@ def _finish(variant, scenario, llm, tb: ToolBox, started, rounds, error=None) ->
     if not tb.submitted:
         tb.call("submit")
     rep = tb.last_report.to_dict() if tb.last_report is not None else None
+    drift_before = None
+    if scenario.has_drift and tb.connector_path.exists():
+        from connector_forge.harness import evaluate_drift
+
+        drift_before = evaluate_drift(scenario, tb.connector_path, sandbox=True, timeout=60).to_dict()
     return AgentResult(
         variant=variant,
         scenario=scenario.name,
@@ -91,6 +98,7 @@ def _finish(variant, scenario, llm, tb: ToolBox, started, rounds, error=None) ->
         blocked=tb.blocked + (rep or {}).get("blocked", 0),
         error=error,
         tool_log=[asdict(c) for c in tb.log],
+        drift_before=drift_before,
     )
 
 
@@ -214,3 +222,74 @@ def run_graph(scenario: Scenario, llm: LLM, run_dir: Path, rounds: int = 4, max_
 
 
 AGENTS["graph"] = run_graph
+
+
+REPAIR_PROMPT = """Your connector worked, but the API has changed since the documentation was written.
+A fresh full sync against the changed API gave:
+
+{results}
+
+Current module:
+```python
+{code}
+```
+
+Find out what changed (you may probe the API) and reply with the complete fixed module in one
+```python block. schema() must describe the fields the API returns now."""
+
+
+def drift_score(rep: dict[str, Any] | None) -> float:
+    if not rep:
+        return -1.0
+    return rep["accuracy"] + rep["schema_accuracy"] - 0.2 * bool(rep["errors"]) - 0.1 * min(rep["rate_violations"], 5)
+
+
+def run_graph_repair(scenario: Scenario, llm: LLM, run_dir: Path, rounds: int = 4, repair_rounds: int = 3,
+                     max_probes: int = 4) -> AgentResult:
+    """graph, then: the API drifts; re-sync, and repair the connector from the failing result."""
+    from connector_forge.harness import DriftReport
+    from connector_forge.tools import summarize_drift
+
+    started = time.monotonic()
+    result = run_graph(scenario, llm, run_dir, rounds=rounds, max_probes=max_probes)
+    result.variant = "graph+repair"
+    final = Path(run_dir) / "connector.py"
+    if result.drift_before is None or not final.exists():
+        return result
+    code = final.read_text(encoding="utf-8")
+    best = (drift_score(result.drift_before), code, result.drift_before)
+    limits = {"read_docs": 1, "probe_api": max_probes, "write_connector": repair_rounds + 1,
+              "run_tests": repair_rounds, "submit": 1}
+    used = 0
+    with ToolBox(scenario, Path(run_dir) / "repair", limits=limits, drifted=True) as tb:
+        docs = tb.call("read_docs")
+        results = summarize_drift(DriftReport(**result.drift_before))
+        while used < repair_rounds and "ALL CHECKS PASSED" not in results:
+            used += 1
+            system = CONTRACT + "\n" + PROBE_HELP.format(n=max_probes)
+            user = f"Original API documentation:\n\n{docs}\n\n" + REPAIR_PROMPT.format(results=results, code=code)
+            reply = _probe_turn(tb, llm, _messages(system, user), max_probes)
+            if _write(tb, reply) is None:
+                code = tb.connector_path.read_text(encoding="utf-8")
+                results = tb.call("run_tests")
+                rep = tb.last_report.to_dict()
+                if drift_score(rep) > best[0]:
+                    best = (drift_score(rep), code, rep)
+            else:
+                results = "Your reply had no usable python module.\n" + results
+        tb.call("submit")
+        tb.connector_path.write_text(best[1], encoding="utf-8")
+        result.drift_after = best[2]
+        result.rounds += used
+        result.tool_log += [asdict(c) for c in tb.log]
+        result.tool_calls = len(result.tool_log)
+        result.blocked += tb.blocked
+    result.llm_calls = llm.usage.calls
+    result.prompt_tokens = llm.usage.prompt_tokens
+    result.output_tokens = llm.usage.output_tokens
+    result.llm_seconds = round(llm.usage.seconds, 2)
+    result.seconds = round(time.monotonic() - started, 2)
+    return result
+
+
+AGENTS["graph+repair"] = run_graph_repair

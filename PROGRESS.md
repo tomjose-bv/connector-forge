@@ -79,6 +79,10 @@
   scenarios (5 dev + 1 held-out total); drifted reference connectors in
   connectors/reference/[heldout/]drifted/ score 1.0, originals keep accuracy 1.0 but lose
   schema accuracy. 144 tests passing.
+- M4.2 `graph+repair`: runs graph, then probes/tests against the drifted API (ToolBox
+  drifted mode, summarize_drift) with the original docs only, up to 3 repair rounds, best
+  kept in run_dir/repair/connector.py. Every variant records drift_before for drift
+  scenarios; graph+repair also drift_after. CLI `--variant graph+repair`. 149 tests passing.
 
 ## Ideas for later
 
@@ -86,8 +90,7 @@
 
 ## Next step
 
-Milestone 4, step 2: graph+repair agent. ToolBox gets drifted=True mode (probe API in
-drifted phase, run_tests = evaluate_drift summary). `run_graph_repair`: run graph, then tell
-the model the API changed and show the drift test result (docs are NOT updated), allow
-probes and up to 3 repair rounds; keep best. AgentResult gets drift_before/drift_after. For
-graph without repair, also record drift_before so recovery can be compared.
+Milestone 4/5 next: after the M2.7 baselines finish (runs/baseline-*-dev-s1), run graph and
+graph+repair on dev seed 1 and inspect failures. Then milestone 5 step 1: `connector-forge
+report` command that aggregates summary.json files into a Markdown results table (mean +-
+spread over seeds, per variant), with machine/date from the runs.
