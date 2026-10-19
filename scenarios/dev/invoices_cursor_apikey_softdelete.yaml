@@ -11,3 +11,6 @@ resources:
   incremental: true
   soft_deletes: true
 changes: {created: 4, updated: 4, deleted: 5}
+drift:
+  rename:
+    invoices: {amount: amount_due}

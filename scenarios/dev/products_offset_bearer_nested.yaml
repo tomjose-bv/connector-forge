@@ -15,3 +15,6 @@ resources:
     updated_at: timestamp
   incremental: true
 changes: {created: 5, updated: 6, deleted: 0}
+drift:
+  add:
+    products: {sku: string}

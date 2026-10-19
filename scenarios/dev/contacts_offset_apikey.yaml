@@ -14,3 +14,6 @@ resources:
       email: email
       updated_at: timestamp
 changes: {created: 5, updated: 8, deleted: 0}
+drift:
+  rename:
+    contacts: {email: email_address}

@@ -82,6 +82,17 @@ class Scenario:
                 return r
         raise KeyError(name)
 
+    @property
+    def has_drift(self) -> bool:
+        return bool(self.drift.rename or self.drift.add)
+
+    def fields_after_drift(self, res: Resource) -> dict[str, Any]:
+        """Top-level fields of a resource once the drift is applied (renames keep their order)."""
+        renames = self.drift.rename.get(res.name, {})
+        fields = {renames.get(k, k): t for k, t in res.fields.items()}
+        fields.update(self.drift.add.get(res.name, {}))
+        return fields
+
 
 def _check_fields(where: str, fields: Any) -> None:
     if not isinstance(fields, dict) or not fields:
@@ -146,6 +157,11 @@ def parse(data: dict[str, Any]) -> Scenario:
     for res in (*drift.rename, *drift.add):
         if res not in names:
             raise ScenarioError(f"drift: unknown resource {res!r}")
+    for res_name, renames in drift.rename.items():
+        r = resources[names.index(res_name)]
+        for old in renames:
+            if old not in r.fields or old in (r.primary_key, "updated_at"):
+                raise ScenarioError(f"drift: cannot rename {res_name}.{old}")
 
     return Scenario(
         name=str(data["name"]),

@@ -138,13 +138,14 @@ def compare(scenario: Scenario, truth: Dataset, wh: Warehouse) -> dict[str, Reso
     return out
 
 
-def schema_accuracy(scenario: Scenario, declared: Any) -> float:
+def schema_accuracy(scenario: Scenario, declared: Any, drifted: bool = False) -> float:
     """Mean over resources of field-name Jaccard similarity; 0 for a resource with a wrong primary key."""
     if not isinstance(declared, dict):
         return 0.0
     scores = []
     for res in scenario.resources:
-        want = set(res.fields) | ({"deleted"} if res.soft_deletes else set())
+        fields = scenario.fields_after_drift(res) if drifted else res.fields
+        want = set(fields) | ({"deleted"} if res.soft_deletes else set())
         got = declared.get(res.name)
         if not isinstance(got, dict) or got.get("primary_key") != res.primary_key:
             scores.append(0.0)
@@ -300,3 +301,68 @@ def _detail(scenario: Scenario, truth: Dataset, wh: Warehouse, scores: dict[str,
                     break
         out[res.name] = d
     return out
+
+
+@dataclass
+class DriftReport:
+    """A fresh full sync after the API's schema drifted, scored against the drifted ground truth."""
+
+    scenario: str
+    connector: str
+    accuracy: float
+    schema_accuracy: float
+    rate_violations: int
+    requests: int
+    seconds: float
+    errors: list[str]
+    blocked: int = 0
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def evaluate_drift(scenario: Scenario, connector_path: str | Path, sandbox: bool = False, timeout: float = 120.0) -> DriftReport:
+    import time
+
+    from connector_forge.mock_api import MockAPI
+
+    errors: list[str] = []
+    wh = Warehouse()
+    started = time.monotonic()
+    scores: dict[str, ResourceScore] = {}
+    details: dict[str, Any] = {}
+    with MockAPI(scenario) as api:
+        api.set_phase("drifted")
+        truth = api.dataset
+        try:
+            if sandbox:
+                from connector_forge.sandbox import SandboxConnector
+
+                connector = SandboxConnector.for_url(connector_path, api.url, timeout)
+            else:
+                connector = load_connector(connector_path)
+            declared = connector.schema()
+        except Exception as e:
+            connector, declared = None, None
+            errors.append(f"load: {type(e).__name__}: {e}")
+        if connector is not None:
+            r = run_sync(connector, scenario, config_for(scenario, api.url), None, wh)
+            if r.error:
+                errors.append(f"sync: {r.error}")
+            scores = compare(scenario, truth, wh)
+            details["drifted"] = _detail(scenario, truth, wh, scores)
+        violations, requests = api.rate_violations, len(api.log)
+        blocked = len(getattr(connector, "blocked", []))
+    return DriftReport(
+        scenario=scenario.name,
+        connector=str(connector_path),
+        accuracy=_total_accuracy(scores) if scores else 0.0,
+        schema_accuracy=schema_accuracy(scenario, declared, drifted=True),
+        rate_violations=violations,
+        requests=requests,
+        seconds=round(time.monotonic() - started, 3),
+        errors=errors,
+        blocked=blocked,
+        details=details,
+    )

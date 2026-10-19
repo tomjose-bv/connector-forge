@@ -73,6 +73,12 @@
 - M3.2 `graph` agent: one probe turn, then write -> run_tests -> fix for up to 4 rounds with
   small context (contract + docs + current code + test output); best-scoring version kept as
   final; `--variant graph` in CLI. 135 tests passing.
+- M4.1 Drift evaluation: `evaluate_drift()` -> DriftReport (fresh full sync on the drifted
+  API vs drifted truth; schema accuracy vs drifted schema). Scenario.has_drift /
+  fields_after_drift; renaming pk or updated_at rejected. Drift added to 3 more dev
+  scenarios (5 dev + 1 held-out total); drifted reference connectors in
+  connectors/reference/[heldout/]drifted/ score 1.0, originals keep accuracy 1.0 but lose
+  schema accuracy. 144 tests passing.
 
 ## Ideas for later
 
@@ -80,6 +86,8 @@
 
 ## Next step
 
-Milestone 3, step 3: when the M2.7 baselines finish, run graph on all dev scenarios (seed 1)
-and compare with prompt/probe; record failure categories and what the fix loop solves in
-PROGRESS.md. Then milestone 4: drift phase in evaluate + graph+repair.
+Milestone 4, step 2: graph+repair agent. ToolBox gets drifted=True mode (probe API in
+drifted phase, run_tests = evaluate_drift summary). `run_graph_repair`: run graph, then tell
+the model the API changed and show the drift test result (docs are NOT updated), allow
+probes and up to 3 repair rounds; keep best. AgentResult gets drift_before/drift_after. For
+graph without repair, also record drift_before so recovery can be compared.

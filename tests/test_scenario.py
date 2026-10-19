@@ -50,3 +50,14 @@ def test_validation(over, msg):
 def test_missing_key():
     with pytest.raises(ScenarioError, match="seed"):
         parse({"name": "t", "resources": []})
+
+
+def test_drift_cannot_rename_primary_key():
+    with pytest.raises(ScenarioError, match="cannot rename"):
+        parse(base(drift={"rename": {"r": {"id": "pk"}}}))
+
+
+def test_fields_after_drift():
+    s = parse(base(resources=[{"name": "r", "path": "/r", "count": 1, "fields": {"id": "int", "a": "string"}}],
+                   drift={"rename": {"r": {"a": "b"}}, "add": {"r": {"c": "int"}}}))
+    assert s.has_drift and list(s.fields_after_drift(s.resources[0])) == ["id", "b", "c"]
