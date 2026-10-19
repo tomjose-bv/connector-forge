@@ -39,11 +39,12 @@ class OllamaClient:
     temperature: float = 0.2
     seed: int | None = None
     num_ctx: int = 8192
-    timeout: float = 600.0
+    num_predict: int = 2048  # cap reply length so a runaway generation stops
+    timeout: float = 300.0
     usage: Usage = field(default_factory=Usage)
 
     def chat(self, messages: list[dict[str, str]]) -> str:
-        options = {"temperature": self.temperature, "num_ctx": self.num_ctx}
+        options = {"temperature": self.temperature, "num_ctx": self.num_ctx, "num_predict": self.num_predict}
         if self.seed is not None:
             options["seed"] = self.seed
         body = json.dumps({"model": self.model, "messages": messages, "stream": False, "options": options}).encode()

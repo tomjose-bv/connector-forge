@@ -85,7 +85,15 @@ def cmd_agent(args: argparse.Namespace, llm=None) -> int:
     print(f"{'scenario':<45} {'full':>5} {'incr':>5} {'schema':>6} {'calls':>5} {'tokens':>7} {'secs':>6}")
     for f in files:
         client = llm or OllamaClient(model=args.model, seed=args.seed, temperature=args.temperature)
-        res = AGENTS[args.variant](load(f), client, out / f.stem)
+        try:
+            res = AGENTS[args.variant](load(f), client, out / f.stem)
+        except Exception as e:  # a crashed agent (e.g. a model call timing out) fails only this scenario
+            from connector_forge.agents import AgentResult
+
+            u = client.usage
+            res = AgentResult(args.variant, f.stem, getattr(client, "model", "?"), None, u.calls, u.prompt_tokens,
+                              u.output_tokens, round(u.seconds, 2), 0.0, 0, 0, 0, error=f"agent crashed: {type(e).__name__}: {e}")
+            (out / f.stem).mkdir(parents=True, exist_ok=True)
         results.append(res.to_dict())
         rep = res.report or {}
         print(

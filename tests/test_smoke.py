@@ -39,3 +39,19 @@ def test_cli_agent_with_fake_llm(tmp_path):
     summary = json.loads((tmp_path / "run/summary.json").read_text())
     assert summary["results"][0]["report"]["full_sync_accuracy"] == 1.0
     assert (tmp_path / "run/events_link_none/connector_v1.py").exists()
+
+
+def test_cli_agent_survives_crashing_model(tmp_path):
+    import argparse
+    import json
+    from pathlib import Path
+
+    from connector_forge.cli import cmd_agent
+    from connector_forge.llm import FakeLLM
+
+    root = Path(__file__).resolve().parent.parent
+    args = argparse.Namespace(root=str(root), set="dev", scenario=["events_link_none", "orders_page_bearer"],
+                              variant="prompt", model="fake", seed=1, temperature=0.0, out=str(tmp_path / "run"))
+    assert cmd_agent(args, llm=FakeLLM([])) == 0  # FakeLLM raises: out of replies
+    results = json.loads((tmp_path / "run/summary.json").read_text())["results"]
+    assert len(results) == 2 and all("agent crashed" in r["error"] for r in results)
