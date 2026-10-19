@@ -1,0 +1,16 @@
+name: contacts_offset_apikey
+description: Contacts with offset pagination and an API key header.
+seed: 1
+auth: {type: api_key, header: X-API-Key, secret: dev-key-123}
+pagination: {type: offset, page_size: 20}
+resources:
+  - name: contacts
+    path: /contacts
+    count: 75
+    incremental: true
+    fields:
+      id: int
+      name: name
+      email: email
+      updated_at: timestamp
+changes: {created: 5, updated: 8, deleted: 0}
