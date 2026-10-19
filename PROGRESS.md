@@ -55,6 +55,9 @@
   shortened to 2 records + pagination fields, write_connector with versions + syntax check,
   run_tests = sandboxed evaluate + short summary, submit). Guard: path-only GETs to the mock
   API, per-tool limits, unknown tools blocked, every call logged. 122 tests passing.
+- M2.4 `llm.py`: OllamaClient (stdlib, /api/chat, temperature/seed/num_ctx, token usage),
+  FakeLLM for tests, extract_code(). Smoke call to local qwen2.5-coder:3b works. 125 tests
+  passing.
 
 ## Ideas for later
 
@@ -62,7 +65,9 @@
 
 ## Next step
 
-Milestone 2, step 4: LLM client. `src/connector_forge/llm.py`: OllamaClient.chat(messages)
--> text via http://127.0.0.1:11434/api/chat (stdlib, lazy, temperature + seed options,
-returns token counts from prompt_eval_count/eval_count), and a FakeLLM with scripted replies
-for tests. Helper extract_code(text) pulling the python block out of a reply.
+Milestone 2, step 5: prompt and probe agents. `src/connector_forge/agents.py`: shared system
+prompt with the connector contract (stdlib only, schema()/sync(config, state) generator
+returning state, config keys) + docs. `prompt` agent: one LLM call, extract code,
+write_connector, run_tests once (score only), submit. `probe` agent: LLM may request up to N
+probes first via a simple text protocol (PROBE /path?query lines), then writes code.
+AgentResult dataclass (report, usage, tool log). Tests with FakeLLM.
