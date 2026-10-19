@@ -43,6 +43,10 @@
   [--out file.json]` (table + JSON with machine/date). Employer-terms checks clean (tree and
   history). 84 tests passing (~12 s).
 - **Milestone 1 done.**
+- M2.1 `docs.py` renders a Markdown API reference per scenario (auth, pagination, rate
+  limits, resources, fields, example with placeholders). Pre-drift schema only; no secrets
+  or ground-truth values. 106 tests passing. Work is on local branch `dev`; push one
+  milestone per day to main after asking.
 
 ## Ideas for later
 
@@ -50,7 +54,8 @@
 
 ## Next step
 
-Milestone 2, step 1: API docs per scenario. `src/connector_forge/docs.py` renders a
-Markdown API reference from a Scenario (base URL placeholder, auth, pagination, resources
-and field types, `updated_since`, rate limits, soft deletes) — the only input agents get.
-Tests: docs mention every resource path, field and auth detail; no ground-truth data.
+Milestone 2, step 2: sandbox. `src/connector_forge/sandbox.py` runs a connector file in a
+subprocess (python -I) with a timeout; a runner script inside the subprocess loads the
+connector, installs a socket guard allowing only 127.0.0.1:<api port>, calls schema()/sync()
+and streams JSON lines (records, state, schema, error) to stdout. `evaluate()` gets an
+option to use it. README note: safety measure for a local demo, not a security boundary.
