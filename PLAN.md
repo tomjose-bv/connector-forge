@@ -89,3 +89,26 @@ for the right sources, connect them correctly, and find the planted cause.
 Open questions: real SaaS APIs need real OAuth apps and terms-of-use review; holding user
 credentials would make this a hosted product with security obligations; multi-step analysis
 likely needs a stronger local model than the 3B one used for connector code.
+
+### Path there
+
+The goal is an agent that diagnoses metric changes with evidence and is benchmarked, not a
+hosted platform for customers. Diagnosis is the hardest and least crowded part, so build it
+first, without live connectors:
+
+1. **Diagnosis on DuckDB (first):** a synthetic business (orders, ad spend, billing, web
+   traffic) generated from a seed, with one planted cause per scenario (for example one
+   campaign overspending in one region). The agent gets a question and the loaded tables and
+   must find the cause. Every claim in its answer must cite the SQL query and the numbers
+   behind it.
+2. **Clarifying questions:** the agent must pin down the metric, period and comparison before
+   querying; scenarios include vague questions with a scripted user who answers.
+3. **Source selection:** the data starts behind mock APIs (connector-forge scenarios); the
+   agent must ask for and connect only the sources the question needs.
+4. **End to end:** question → clarify → connect → model → diagnose, all local.
+
+Scores: planted cause found (yes/no and rank), unsupported claims (claims without a
+backing query), right sources chosen, clarifying questions asked, steps, tokens and time.
+
+This lives in a separate repo that uses connector-forge as a library, so connector-forge stays
+a focused, finished tool.
