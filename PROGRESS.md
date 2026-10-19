@@ -58,6 +58,10 @@
 - M2.4 `llm.py`: OllamaClient (stdlib, /api/chat, temperature/seed/num_ctx, token usage),
   FakeLLM for tests, extract_code(). Smoke call to local qwen2.5-coder:3b works. 125 tests
   passing.
+- M2.5 `agents.py`: shared contract prompt; `prompt` agent (one call, no probing) and
+  `probe` agent (PROBE lines, up to N probes / 3 turns, then code); final score via
+  run_tests the agent never sees; AgentResult with tokens, time, tool log. 130 tests
+  passing.
 
 ## Ideas for later
 
@@ -65,9 +69,7 @@
 
 ## Next step
 
-Milestone 2, step 5: prompt and probe agents. `src/connector_forge/agents.py`: shared system
-prompt with the connector contract (stdlib only, schema()/sync(config, state) generator
-returning state, config keys) + docs. `prompt` agent: one LLM call, extract code,
-write_connector, run_tests once (score only), submit. `probe` agent: LLM may request up to N
-probes first via a simple text protocol (PROBE /path?query lines), then writes code.
-AgentResult dataclass (report, usage, tool log). Tests with FakeLLM.
+Milestone 2, step 6: CLI `connector-forge agent --variant prompt|probe --set dev [--scenario
+X] [--seed N] [--model M] --out runs/...` running agents with OllamaClient, saving each run
+dir (connector versions, result.json) under runs/<date>-<variant>-<seed>/. Smoke run on 1-2
+dev scenarios with the real model to see failure modes (no numbers in README yet).
