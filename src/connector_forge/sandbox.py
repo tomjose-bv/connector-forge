@@ -43,7 +43,7 @@ class SandboxConnector:
             "PYTHONIOENCODING": "utf-8",
             "NO_PROXY": "*",  # keep urllib from reading system proxy settings
         }
-        with tempfile.TemporaryDirectory(prefix="cf-sandbox-") as work:
+        with tempfile.TemporaryDirectory(prefix="cf-sandbox-", ignore_cleanup_errors=True) as work:
             proc = subprocess.Popen(
                 [sys.executable, "-I", "-B", str(RUNNER), str(self.path), str(self.port), mode],
                 cwd=work,
