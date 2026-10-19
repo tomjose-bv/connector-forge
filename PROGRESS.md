@@ -62,6 +62,10 @@
   `probe` agent (PROBE lines, up to N probes / 3 turns, then code); final score via
   run_tests the agent never sees; AgentResult with tokens, time, tool log. 130 tests
   passing.
+- M2.6 CLI `connector-forge agent --variant prompt|probe` (Ollama, seed, model, run dir with
+  connector versions, result.json, summary.json with machine/date). Smoke run (2 dev
+  scenarios, prompt, qwen2.5-coder:3b): code runs but has typical bugs (URL built outside
+  the page loop; state.get on None). 131 tests passing.
 
 ## Ideas for later
 
@@ -69,7 +73,6 @@
 
 ## Next step
 
-Milestone 2, step 6: CLI `connector-forge agent --variant prompt|probe --set dev [--scenario
-X] [--seed N] [--model M] --out runs/...` running agents with OllamaClient, saving each run
-dir (connector versions, result.json) under runs/<date>-<variant>-<seed>/. Smoke run on 1-2
-dev scenarios with the real model to see failure modes (no numbers in README yet).
+Milestone 2, step 7: baseline runs of prompt and probe on all 16 dev scenarios, seed 1
+(runs/ is gitignored; keep summary.json). Record the observed failure categories in
+PROGRESS.md. Then milestone 3: graph agent.
