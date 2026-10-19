@@ -175,6 +175,7 @@ class Report:
     requests: int
     seconds: float
     errors: list[str]
+    blocked: int = 0  # calls blocked by the sandbox guard
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -192,22 +193,30 @@ def _incremental_truth(scenario: Scenario, before: Dataset, after: Dataset) -> D
     return out
 
 
-def evaluate(scenario: Scenario, connector_path: str | Path) -> Report:
-    """Full sync, then an incremental sync after the API data changes; score both."""
+def evaluate(scenario: Scenario, connector_path: str | Path, sandbox: bool = False, timeout: float = 120.0) -> Report:
+    """Full sync, then an incremental sync after the API data changes; score both.
+
+    With `sandbox=True` the connector runs in a guarded subprocess (see sandbox.py).
+    """
     import time
 
     from connector_forge.mock_api import MockAPI
 
     errors: list[str] = []
-    try:
-        connector = load_connector(connector_path)
-        declared = connector.schema()
-    except Exception as e:
-        connector, declared = None, None
-        errors.append(f"load: {type(e).__name__}: {e}")
     wh = Warehouse()
     started = time.monotonic()
     with MockAPI(scenario) as api:
+        try:
+            if sandbox:
+                from connector_forge.sandbox import SandboxConnector
+
+                connector = SandboxConnector.for_url(connector_path, api.url, timeout)
+            else:
+                connector = load_connector(connector_path)
+            declared = connector.schema()
+        except Exception as e:
+            connector, declared = None, None
+            errors.append(f"load: {type(e).__name__}: {e}")
         before, after = api.datasets["initial"], api.datasets["changed"]
         config = config_for(scenario, api.url)
         state = None
@@ -231,6 +240,7 @@ def evaluate(scenario: Scenario, connector_path: str | Path) -> Report:
         inc = compare(scenario, truth2, wh) if connector is not None else {}
         rate_limited = sum(1 for e in api.log if e.status == 429)
         violations, requests = api.rate_violations, len(api.log)
+        blocked = len(getattr(connector, "blocked", []))
 
     refetched = missed_updates = missed_deletes = 0
     for res in scenario.resources:
@@ -261,4 +271,5 @@ def evaluate(scenario: Scenario, connector_path: str | Path) -> Report:
         requests=requests,
         seconds=round(time.monotonic() - started, 3),
         errors=errors,
+        blocked=blocked,
     )

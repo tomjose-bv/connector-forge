@@ -31,6 +31,17 @@ scenario YAML ──► mock API (localhost) ◄── connector code runs here
 - **Harness** (`harness.py`): runs a full sync and an incremental sync, loads records into
   DuckDB by primary key and compares them with the ground truth.
 
+## Sandbox
+
+With `evaluate(..., sandbox=True)` a connector runs in a separate Python process
+(`python -I -B`) with a timeout, a temporary working directory and a minimal environment. A
+Python audit hook blocks network connections other than the mock API's port, DNS lookups other
+than localhost, file writes outside the working directory, and starting processes; each blocked
+call is logged and counted.
+
+This is a safety measure for a local demo, not a security boundary: code that uses native
+extensions can bypass audit hooks. Don't run untrusted connectors on a machine you care about.
+
 ## Metrics
 
 | Metric | Meaning |

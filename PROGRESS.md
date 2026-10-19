@@ -47,6 +47,10 @@
   limits, resources, fields, example with placeholders). Pre-drift schema only; no secrets
   or ground-truth values. 106 tests passing. Work is on local branch `dev`; push one
   milestone per day to main after asking.
+- M2.2 Sandbox: `sandbox.py` + `_sandbox_runner.py` (subprocess, timeout, temp workdir,
+  audit-hook guard for network/DNS/file writes/processes, blocked-call log).
+  `evaluate(sandbox=True)`, Report.blocked. All 21 reference connectors perfect in the
+  sandbox. README section. 116 tests passing.
 
 ## Ideas for later
 
@@ -54,8 +58,8 @@
 
 ## Next step
 
-Milestone 2, step 2: sandbox. `src/connector_forge/sandbox.py` runs a connector file in a
-subprocess (python -I) with a timeout; a runner script inside the subprocess loads the
-connector, installs a socket guard allowing only 127.0.0.1:<api port>, calls schema()/sync()
-and streams JSON lines (records, state, schema, error) to stdout. `evaluate()` gets an
-option to use it. README note: safety measure for a local demo, not a security boundary.
+Milestone 2, step 3: agent tools + guard. `src/connector_forge/tools.py`: a ToolBox for one
+scenario run with read_docs(), probe_api(path, params) (GET to the mock API only, with auth
+handled by the toolbox, response truncated), write_connector(code) (saved in the run dir),
+run_tests() (sandboxed evaluate, short diff report), submit(). Guard: per-tool call limits,
+only mock-API paths, every call logged. Tests without a model.
