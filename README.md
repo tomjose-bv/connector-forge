@@ -4,9 +4,10 @@ A local AI agent that turns an API's documentation into a tested data connector 
 when the API changes, plus an evaluation harness that measures how well it does that.
 Everything runs on one machine: Ollama for the model, DuckDB for the warehouse.
 
-**Status:** milestones 1–3 of 5 done: scenario format, mock API, evaluation harness, reference
-connectors, sandbox, guarded agent tools, and three AI agents including `graph`, which tests and
-fixes its own connector. Repair after API changes comes next (see [Roadmap](#roadmap)).
+**Status:** milestones 1–4 of 5 built: scenario format, mock API, evaluation harness, reference
+connectors, sandbox, guarded agent tools, and four AI agents including `graph+repair`, which fixes
+its own connector after the API changes. Benchmark results come with milestone 5
+(see [Roadmap](#roadmap)).
 
 ## How it works
 
@@ -35,6 +36,9 @@ scenario YAML ──► mock API (localhost) ◄── connector code runs here
 - **API docs** (`docs.py`): a Markdown reference generated from the scenario: auth, pagination,
   rate limits, resources and field types. It is all an agent gets, and never contains
   ground-truth values or secrets.
+- **Schema drift**: after the first syncs, some scenarios rename or add a field. A fresh sync
+  against the drifted API is scored against the drifted ground truth and schema; the docs are
+  not updated, as with real APIs.
 
 ## Agents
 
@@ -44,6 +48,7 @@ scenario YAML ──► mock API (localhost) ◄── connector code runs here
 | `prompt` | one model call from the docs |
 | `probe` | may GET a few API pages first, then writes the connector |
 | `graph` | fixed plan: probe → write → test → fix, up to 4 rounds; keeps the best version |
+| `graph+repair` | `graph`, then after the API drifts: re-sync, probe the changed API, repair (up to 3 rounds) |
 
 Agents act only through tools: `read_docs`, `probe_api` (GET to the mock API, auth added),
 `write_connector`, `run_tests` (sandboxed full + incremental sync; the report gives per-resource
@@ -108,7 +113,7 @@ milestone 5.
 1. ~~Mock API, scenario format, harness and reference connectors.~~
 2. ~~Sandbox, guard, agent tools, and the `prompt` and `probe` agents.~~
 3. ~~The `graph` agent with a probe → write → test → fix loop.~~
-4. Schema drift and `graph+repair`: the agent repairs its connector after the API changes.
+4. ~~Schema drift and `graph+repair`: the agent repairs its connector after the API changes.~~
 5. Runs over three seeds, results in this README, CI, v0.1.0 release.
 
 ## License
