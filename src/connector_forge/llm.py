@@ -79,8 +79,11 @@ _FENCE = re.compile(r"```(?:python|py)?[ \t]*\n(.*?)```", re.DOTALL)
 
 
 def extract_code(text: str) -> str | None:
-    """Return the longest fenced code block in a reply, or the reply itself if it looks like code."""
-    blocks = _FENCE.findall(text)
+    """Return the longest fenced block that defines a function, or the reply itself if it looks like code.
+
+    Fenced blocks without a `def` (e.g. PROBE requests a model put in a code fence) are not code.
+    """
+    blocks = [b for b in _FENCE.findall(text) if "def " in b]
     if blocks:
         return max(blocks, key=len).strip() + "\n"
     if "def sync" in text and "def schema" in text:

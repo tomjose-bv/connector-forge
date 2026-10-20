@@ -12,6 +12,7 @@ def test_extract_code():
     assert extract_code(text) == "def schema():\n    return {}\n"
     assert extract_code("def schema(): ...\ndef sync(c, s): ...") is not None
     assert extract_code("no code here") is None
+    assert extract_code("```\nPROBE /x\n```") is None
 
 
 def test_fake_llm():

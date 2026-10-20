@@ -76,3 +76,10 @@ def test_graph_stops_when_perfect(tmp_path):
     llm = FakeLLM([FENCED])
     r = run_graph(SCEN, llm, tmp_path)
     assert r.rounds == 1 and r.llm_calls == 1 and r.report["incremental_accuracy"] == 1.0
+
+
+def test_probe_lines_inside_a_code_fence_are_probes(tmp_path):
+    llm = FakeLLM(["```\nPROBE /events?page=1\nPROBE /events?page=2\n```", FENCED])
+    r = run_probe(SCEN, llm, tmp_path)
+    assert sum(1 for c in r.tool_log if c["tool"] == "probe_api") == 2
+    assert r.report["full_sync_accuracy"] == 1.0
