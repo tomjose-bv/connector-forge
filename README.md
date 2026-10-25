@@ -108,6 +108,14 @@ Each run directory keeps every connector version the agent wrote and a `result.j
 `summary.json` records the machine, date, model and seed. Benchmark results come with
 milestone 5.
 
+Fixes from the first real benchmark runs:
+
+- Model replies are capped (2,048 tokens, 300 s timeout). One runaway reply had stalled a
+  whole run, and now an agent that crashes fails only its own scenario.
+- A connector is only taken from a code block that defines a function. The model sometimes
+  put its `PROBE` lines in a code fence, which used to count as the connector, so the probe
+  agent never probed.
+
 ## Roadmap
 
 1. ~~Mock API, scenario format, harness and reference connectors.~~
